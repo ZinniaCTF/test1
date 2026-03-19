@@ -1,29 +1,53 @@
-import { Plugin, registerPlugin } from 'enmity/managers/plugins';
-import { React } from 'enmity/metro/common';
-import { getByProps } from 'enmity/metro';
-import { create } from 'enmity/patcher';
-import manifest from '../manifest.json';
+import { getByProps } from "@enmity/metro";
+import { after } from "@enmity/patcher";
 
-import Settings from './components/Settings';
+const FAKE_NAME = "awesomepvpcat_destroyerofworldz";
+const REAL_NAME = "firefox";
 
-const Typing = getByProps('startTyping');
-const Patcher = create('silent-typing');
+export default {
+  name: "UsernameSpoof",
+  version: "1.0.0",
+  description: "Spoofs your username locally",
 
-const SilentTyping: Plugin = {
-   ...manifest,
+  onStart() {
+    const UserStore = getByProps("getCurrentUser", "getUser");
 
-   onStart() {
-      Patcher.instead(Typing, 'startTyping', () => { });
-      Patcher.instead(Typing, 'stopTyping', () => { });
-   },
+    // Patch current user
+    this.unpatch1 = after(UserStore, "getCurrentUser", (_, __, res) => {
+      if (!res) return;
 
-   onStop() {
-      Patcher.unpatchAll();
-   },
+      if (
+        res.username?.toLowerCase() === REAL_NAME.toLowerCase() ||
+        res.globalName?.toLowerCase() === REAL_NAME.toLowerCase()
+      ) {
+        return {
+          ...res,
+          username: FAKE_NAME,
+          globalName: FAKE_NAME
+        };
+      }
 
-   getSettingsPanel({ settings }) {
-      return <Settings settings={settings} />;
-   }
+      return res;
+    });
+
+    // Patch all users (for messages, member list, etc.)
+    this.unpatch2 = after(UserStore, "getUser", (_, args, res) => {
+      if (!res) return;
+
+      if (res.username?.toLowerCase() === REAL_NAME.toLowerCase()) {
+        return {
+          ...res,
+          username: FAKE_NAME,
+          globalName: FAKE_NAME
+        };
+      }
+
+      return res;
+    });
+  },
+
+  onStop() {
+    this.unpatch1?.();
+    this.unpatch2?.();
+  }
 };
-
-registerPlugin(SilentTyping);
