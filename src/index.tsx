@@ -1,53 +1,37 @@
-import { getByProps } from "@enmity/metro";
-import { after } from "@enmity/patcher";
+/**
+ * @name UsernameSpoof
+ * @version 1.0.0
+ * @description Spoofs your username locally
+ */
+var i = require("@enmity/metro"), l = require("@enmity/patcher");
+const a = "awesomepvpcat_destroyerofworldz", s = "officialfirefox";
 
-const FAKE_NAME = "awesomepvpcat_destroyerofworldz";
-const REAL_NAME = "firefox";
-
-export default {
+module.exports = {
   name: "UsernameSpoof",
   version: "1.0.0",
   description: "Spoofs your username locally",
-
   onStart() {
-    const UserStore = getByProps("getCurrentUser", "getUser");
-
-    // Patch current user
-    this.unpatch1 = after(UserStore, "getCurrentUser", (_, __, res) => {
-      if (!res) return;
-
-      if (
-        res.username?.toLowerCase() === REAL_NAME.toLowerCase() ||
-        res.globalName?.toLowerCase() === REAL_NAME.toLowerCase()
-      ) {
-        return {
-          ...res,
-          username: FAKE_NAME,
-          globalName: FAKE_NAME
-        };
+    const r = i.getByProps("getCurrentUser", "getUser");
+    this.unpatch1 = l.after(r, "getCurrentUser", (o, u, e) => {
+      if (!e) return;
+      const username = e.username?.toLowerCase();
+      const globalName = e.globalName?.toLowerCase();
+      if (username === s.toLowerCase() || globalName === s.toLowerCase()) {
+        return { ...e, username: a, globalName: a };
       }
-
-      return res;
+      return e;
     });
-
-    // Patch all users (for messages, member list, etc.)
-    this.unpatch2 = after(UserStore, "getUser", (_, args, res) => {
-      if (!res) return;
-
-      if (res.username?.toLowerCase() === REAL_NAME.toLowerCase()) {
-        return {
-          ...res,
-          username: FAKE_NAME,
-          globalName: FAKE_NAME
-        };
+    this.unpatch2 = l.after(r, "getUser", (o, u, e) => {
+      if (!e) return;
+      const username = e.username?.toLowerCase();
+      if (username === s.toLowerCase()) {
+        return { ...e, username: a, globalName: a };
       }
-
-      return res;
+      return e;
     });
   },
-
   onStop() {
     this.unpatch1?.();
     this.unpatch2?.();
-  }
+  },
 };
